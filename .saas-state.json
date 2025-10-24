@@ -1,11 +1,27 @@
 {
-  "phase2_status": "failed",
-  "phase2_start_time": "2025-10-24T10:35:36-04:00",
+  "phase2_status": "completed",
+  "phase2_start_time": "2025-10-24T10:36:14-04:00",
   "phase2_message": "Phase 2 failed",
   "services": {
     "postgres_port": 5432,
     "redis_port": 6379,
     "mailhog_smtp": 1025,
     "mailhog_ui": 8025
-  }
+  },
+  "rollback_points": [
+    "phase-1-infrastructure-ready"
+  ],
+  "current_phase": 1,
+  "last_updated": "2025-10-24T14:36:04Z",
+  "completed_phases": [
+    {
+      "phase": 1,
+      "name": "Infrastructure Setup",
+      "completed_at": "2025-10-24T14:36:04Z",
+      "duration_seconds": 5,
+      "status": "success"
+    }
+  ],
+  "phase2_end_time": "2025-10-24T10:37:06-04:00",
+  "phase2_duration": "52"
 }
