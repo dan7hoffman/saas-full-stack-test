@@ -61,7 +61,7 @@ interface ApiResponse<T> {
 })
 export class DashboardService {
   private http = inject(HttpClient);
-  private apiUrl = `${environment.apiUrl}/dashboard`;
+  private apiUrl = `${environment.apiUrl}/api/dashboard`;
 
   /**
    * Get Dashboard Statistics
