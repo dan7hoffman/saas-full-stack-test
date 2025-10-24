@@ -1,7 +1,8 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
+import { DashboardService, DashboardStats } from '@core/services/dashboard.service';
 import { StatCardComponent } from '@ui/components/stat-card.component';
 
 /**
@@ -27,32 +28,47 @@ import { StatCardComponent } from '@ui/components/stat-card.component';
         </div>
       </div>
 
+      <!-- Loading State -->
+      @if (loading()) {
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      }
+
+      <!-- Error State -->
+      @if (error()) {
+        <div class="error-state">
+          <p class="error-message">{{ error() }}</p>
+          <button class="retry-button" (click)="loadDashboardData()">Retry</button>
+        </div>
+      }
+
       <!-- Stats Grid -->
-      <div class="stats-grid">
-        <app-stat-card
-          label="Total Users"
-          [value]="15"
-          subtitle="Active accounts"
-          [trend]="12.5"
-        />
-        <app-stat-card
-          label="Active Sessions"
-          [value]="8"
-          subtitle="Currently online"
-          [trend]="5.2"
-        />
-        <app-stat-card
-          label="Total Activity"
-          [value]="342"
-          subtitle="Actions this week"
-          [trend]="-2.1"
-        />
-        <app-stat-card
-          label="System Health"
-          value="98%"
-          subtitle="All systems operational"
-        />
-      </div>
+      @if (!loading() && !error() && stats()) {
+        <div class="stats-grid">
+          <app-stat-card
+            label="Total Users"
+            [value]="stats()!.totalUsers"
+            subtitle="Registered accounts"
+          />
+          <app-stat-card
+            label="Active Sessions"
+            [value]="stats()!.activeSessions"
+            subtitle="Currently online"
+          />
+          <app-stat-card
+            label="Your Sessions"
+            [value]="stats()!.userSessions"
+            subtitle="Your active sessions"
+          />
+          <app-stat-card
+            label="Account Age"
+            [value]="stats()!.accountAgeDays"
+            subtitle="Days since registration"
+          />
+        </div>
+      }
 
       <!-- Quick Actions -->
       <div class="quick-actions-section">
@@ -156,6 +172,71 @@ import { StatCardComponent } from '@ui/components/stat-card.component';
       font-weight: 600;
       text-transform: capitalize;
       letter-spacing: 0.02em;
+    }
+
+    /* Loading State */
+    .loading-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #3b82f6;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-state p {
+      font-size: 1rem;
+      color: #6b7280;
+      margin: 0;
+    }
+
+    /* Error State */
+    .error-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 12px;
+      margin-bottom: 2rem;
+    }
+
+    .error-message {
+      color: #dc2626;
+      font-size: 1rem;
+      margin: 0;
+      text-align: center;
+    }
+
+    .retry-button {
+      padding: 0.5rem 1.5rem;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .retry-button:hover {
+      background: #2563eb;
     }
 
     /* Stats Grid */
@@ -295,8 +376,14 @@ import { StatCardComponent } from '@ui/components/stat-card.component';
     }
   `]
 })
-export class DashboardComponent {
+export class DashboardComponent implements OnInit {
   private authService = inject(AuthService);
+  private dashboardService = inject(DashboardService);
+
+  // State signals
+  stats = signal<DashboardStats | null>(null);
+  loading = signal(true);
+  error = signal<string | null>(null);
 
   // Computed values from auth service
   displayName = computed(() => {
@@ -310,6 +397,27 @@ export class DashboardComponent {
   });
 
   lastUpdated = new Date().toLocaleString();
+
+  ngOnInit(): void {
+    this.loadDashboardData();
+  }
+
+  loadDashboardData(): void {
+    this.loading.set(true);
+    this.error.set(null);
+
+    this.dashboardService.getStats().subscribe({
+      next: (data) => {
+        this.stats.set(data);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Failed to load dashboard data:', err);
+        this.error.set(err.message || 'Failed to load dashboard data');
+        this.loading.set(false);
+      },
+    });
+  }
 
   viewProfile(): void {
     console.log('View profile clicked');
