@@ -15,6 +15,7 @@ import { generateOpenAPIDocument } from './lib/openapi';
 import authRoutes from './routes/auth.routes';
 import healthRoutes from './routes/health.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import financeRoutes from './routes/finance.routes';
 
 // Load environment variables
 dotenv.config();
@@ -128,6 +129,7 @@ app.use('/', healthRoutes);
 // API routes with rate limiting
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/finance', financeRoutes);
 app.use('/api', apiRateLimit); // Apply to all other API routes
 
 // 404 handler

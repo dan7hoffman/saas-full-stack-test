@@ -41,6 +41,8 @@ model User {
   sessions              Session[]
   verificationTokens    VerificationToken[]
   passwordResetTokens   PasswordResetToken[]
+  accounts              Account[]
+  liabilities           Liability[]
 
   @@index([email])
 }
@@ -104,4 +106,111 @@ enum Role {
 enum TokenType {
   EMAIL_VERIFICATION
   PASSWORD_RESET
+}
+
+// Financial tracking models
+model Account {
+  id            String   @id @default(cuid())
+  userId        String
+
+  // Core fields
+  name          String   // "Chase Checking", "Vanguard 401k"
+  type          AccountType
+  currency      String   @default("USD")
+
+  // Metadata
+  institution   String?  // "Chase", "Vanguard", etc.
+  accountNumber String?  // Last 4 digits (for reference)
+  isActive      Boolean  @default(true)
+
+  // Tracking
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances      Balance[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model Liability {
+  id            String   @id @default(cuid())
+  userId        String
+
+  // Core fields
+  name          String   // "Chase Credit Card", "Student Loan"
+  type          LiabilityType
+  currency      String   @default("USD")
+
+  // Loan details (optional)
+  interestRate  Decimal? @db.Decimal(5, 2)   // APR (e.g., 4.50 for 4.5%)
+  minimumPayment Decimal? @db.Decimal(10, 2) // Monthly minimum
+  dueDate       Int?     // Day of month (1-31)
+
+  // Metadata
+  institution   String?  // "Chase", "Nelnet", etc.
+  accountNumber String?  // Last 4 digits
+  isActive      Boolean  @default(true)
+
+  // Tracking
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balances      Balance[]
+
+  @@index([userId])
+  @@index([userId, isActive])
+}
+
+model Balance {
+  id          String   @id @default(cuid())
+
+  // Polymorphic relation (points to either Account or Liability)
+  accountId   String?
+  liabilityId String?
+
+  // The actual data point
+  amount      Decimal  @db.Decimal(15, 2)
+  date        DateTime // e.g., 2024-12-31 for Q4 2024
+
+  // Optional
+  note        String?  // "Q4 2024", "End of year", etc.
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  account     Account?    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  liability   Liability?  @relation(fields: [liabilityId], references: [id], onDelete: Cascade)
+
+  // Constraints - one balance per account/liability per date
+  @@unique([accountId, date])
+  @@unique([liabilityId, date])
+  @@index([date])
+  @@index([accountId, date])
+  @@index([liabilityId, date])
+}
+
+enum AccountType {
+  CHECKING
+  SAVINGS
+  INVESTMENT
+  RETIREMENT
+  PROPERTY
+  VEHICLE
+  CRYPTO
+  OTHER
+}
+
+enum LiabilityType {
+  CREDIT_CARD
+  STUDENT_LOAN
+  MORTGAGE
+  AUTO_LOAN
+  PERSONAL_LOAN
+  OTHER
 }
