@@ -17,4 +17,9 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
   },
+  {
+    path: 'finance',
+    loadChildren: () =>
+      import('./features/finance/finance.routes').then((m) => m.financeRoutes),
+  },
 ];

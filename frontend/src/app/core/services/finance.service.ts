@@ -28,12 +28,12 @@ export class FinanceService {
   // ============ Accounts ============
 
   getAccounts(includeInactive = false): Observable<Account[]> {
-    const params = includeInactive ? { includeInactive: 'true' } : {};
+    const url = includeInactive
+      ? `${this.apiUrl}/accounts?includeInactive=true`
+      : `${this.apiUrl}/accounts`;
+
     return this.http
-      .get<ApiResponse<Account[]>>(`${this.apiUrl}/accounts`, {
-        params,
-        withCredentials: true,
-      })
+      .get<ApiResponse<Account[]>>(url, { withCredentials: true })
       .pipe(
         map((response) => response.data),
         catchError((error) =>
@@ -82,12 +82,12 @@ export class FinanceService {
   }
 
   deleteAccount(id: string, hardDelete = false): Observable<void> {
-    const params = hardDelete ? { hard: 'true' } : {};
+    const url = hardDelete
+      ? `${this.apiUrl}/accounts/${id}?hard=true`
+      : `${this.apiUrl}/accounts/${id}`;
+
     return this.http
-      .delete<void>(`${this.apiUrl}/accounts/${id}`, {
-        params,
-        withCredentials: true,
-      })
+      .delete<void>(url, { withCredentials: true })
       .pipe(
         catchError((error) =>
           throwError(() => new Error(error.error?.message || 'Failed to delete account'))
@@ -98,12 +98,12 @@ export class FinanceService {
   // ============ Liabilities ============
 
   getLiabilities(includeInactive = false): Observable<Liability[]> {
-    const params = includeInactive ? { includeInactive: 'true' } : {};
+    const url = includeInactive
+      ? `${this.apiUrl}/liabilities?includeInactive=true`
+      : `${this.apiUrl}/liabilities`;
+
     return this.http
-      .get<ApiResponse<Liability[]>>(`${this.apiUrl}/liabilities`, {
-        params,
-        withCredentials: true,
-      })
+      .get<ApiResponse<Liability[]>>(url, { withCredentials: true })
       .pipe(
         map((response) => response.data),
         catchError((error) =>
@@ -152,12 +152,12 @@ export class FinanceService {
   }
 
   deleteLiability(id: string, hardDelete = false): Observable<void> {
-    const params = hardDelete ? { hard: 'true' } : {};
+    const url = hardDelete
+      ? `${this.apiUrl}/liabilities/${id}?hard=true`
+      : `${this.apiUrl}/liabilities/${id}`;
+
     return this.http
-      .delete<void>(`${this.apiUrl}/liabilities/${id}`, {
-        params,
-        withCredentials: true,
-      })
+      .delete<void>(url, { withCredentials: true })
       .pipe(
         catchError((error) =>
           throwError(() => new Error(error.error?.message || 'Failed to delete liability'))
@@ -245,12 +245,12 @@ export class FinanceService {
   // ============ Net Worth ============
 
   getNetWorth(date?: string): Observable<NetWorthData> {
-    const params = date ? { date } : {};
+    const url = date
+      ? `${this.apiUrl}/net-worth?date=${encodeURIComponent(date)}`
+      : `${this.apiUrl}/net-worth`;
+
     return this.http
-      .get<ApiResponse<NetWorthData>>(`${this.apiUrl}/net-worth`, {
-        params,
-        withCredentials: true,
-      })
+      .get<ApiResponse<NetWorthData>>(url, { withCredentials: true })
       .pipe(
         map((response) => response.data),
         catchError((error) =>

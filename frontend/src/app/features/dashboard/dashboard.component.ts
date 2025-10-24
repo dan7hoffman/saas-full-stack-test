@@ -74,6 +74,19 @@ import { StatCardComponent } from '@ui/components/stat-card.component';
       <div class="quick-actions-section">
         <h2 class="section-title">Quick Actions</h2>
         <div class="actions-grid">
+          <a routerLink="/finance/accounts" class="action-card">
+            <div class="action-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                <line x1="1" y1="10" x2="23" y2="10"/>
+              </svg>
+            </div>
+            <div class="action-content">
+              <h3>Manage Accounts</h3>
+              <p>View and manage your financial accounts</p>
+            </div>
+          </a>
+
           <button class="action-card" (click)="viewProfile()">
             <div class="action-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
