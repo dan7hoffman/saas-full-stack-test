@@ -5,7 +5,7 @@ import {
   NG_VALUE_ACCESSOR,
   FormsModule,
 } from '@angular/forms';
-import { InputPrimitive } from '../primitives/input/input.primitive';
+import { InputPrimitive } from '@ui/primitives/input/input.primitive';
 
 /**
  * Input - Layer 2 (Styled Component)

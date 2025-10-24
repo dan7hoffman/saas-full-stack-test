@@ -1,9 +1,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "baseUrl": "./",
     "outDir": "./dist/out-tsc",
-    "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -14,35 +12,34 @@
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "importHelpers": true,
     "target": "ES2022",
     "module": "ES2022",
+    "useDefineForClassFields": false,
     "lib": [
       "ES2022",
       "dom"
     ],
+    "baseUrl": "./src",
     "paths": {
       "@core/*": [
-        "src/app/core/*"
-      ],
-      "@shared/*": [
-        "src/app/shared/*"
+        "app/core/*"
       ],
       "@features/*": [
-        "src/app/features/*"
-      ],
-      "@layouts/*": [
-        "src/app/layouts/*"
-      ],
-      "@env/*": [
-        "src/environments/*"
-      ],
-      "@ui/*": [
-        "src/app/ui/*"
+        "app/features/*"
       ],
       "@ui": [
-        "src/app/ui/index.ts"
+        "app/ui/index.ts"
+      ],
+      "@ui/*": [
+        "app/ui/*"
+      ],
+      "@shared/*": [
+        "app/shared/*"
+      ],
+      "@environments/*": [
+        "environments/*"
       ]
     }
   },

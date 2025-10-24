@@ -136,6 +136,7 @@ export class AuthService {
         email,
         firstName,
         lastName,
+        role: 'USER',
         emailVerified: false,
         createdAt: new Date(),
         updatedAt: new Date(),

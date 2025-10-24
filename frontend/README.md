@@ -1,117 +1,71 @@
-# SaaS Frontend Starter
+# frontend
 
-Modern Angular 19 frontend generated with professional structure and best practices.
+Generated with 4-FrontendGenerator
 
-## 🚀 Quick Start
+## Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Start development server
-npm start
-
-# Open browser
-http://localhost:4200
+npm run dev
 ```
 
-## 📁 Project Structure
+Frontend: http://localhost:4200
+
+## Features
+
+- Angular 19 standalone components
+- Tailwind CSS styling
+- 3-layer UI design system
+- Session-based authentication with CSRF
+- TypeScript strict mode
+
+## API Integration
+
+- Backend API: http://localhost:3000
+- CSRF endpoint: http://localhost:3000/api/auth/csrf-token
+- Login endpoint: http://localhost:3000/api/auth/login
+
+## Project Structure
 
 ```
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── core/               # Singleton services, guards, interceptors
-│   │   │   ├── guards/         # Route guards (auth, role-based)
-│   │   │   ├── interceptors/   # HTTP interceptors (auth, error handling)
-│   │   │   ├── services/       # Core services (auth, api)
-│   │   │   └── models/         # TypeScript interfaces and types
-│   │   ├── shared/             # Reusable components, directives, pipes
-│   │   ├── features/           # Feature modules
-│   │   │   ├── auth/           # Authentication feature (login, register)
-│   │   │   └── dashboard/      # Dashboard feature
-│   │   ├── layouts/            # Layout components
-│   │   │   ├── auth-layout/    # Layout for auth pages
-│   │   │   └── main-layout/    # Layout for authenticated pages
-│   │   └── app.routes.ts       # App routing configuration
-│   ├── environments/           # Environment-specific config
-│   └── styles/                 # Global styles (Tailwind CSS)
-└── .github/
-    └── workflows/
-        └── ci.yml              # CI/CD pipeline
+src/app/
+├── core/           # Services, guards, models
+├── features/       # Feature modules (auth, etc.)
+├── ui/             # 3-layer design system
+│   ├── tokens/     # Design tokens
+│   ├── primitives/ # Headless components
+│   └── components/ # Styled components
+└── shared/         # Shared utilities
 ```
 
-## 🛠️ Available Scripts
+## Testing
 
 ```bash
-npm start              # Start dev server (http://localhost:4200)
-npm run build          # Build for production
-npm test               # Run unit tests
-npm run lint           # Run ESLint
-npm run format         # Format code with Prettier
+npm test           # Unit tests
+npm run lint       # Linting
+npm run build:prod # Production build
 ```
 
-## 🎨 Tech Stack
+## CI/CD
 
-- **Framework**: Angular 19 (standalone components)
-- **Styling**: Tailwind CSS + SCSS
-- **Language**: TypeScript (strict mode)
-- **Testing**: Jasmine + Karma (unit), Playwright (E2E)
-- **Linting**: ESLint
-- **CI/CD**: GitHub Actions
+GitHub Actions workflows are included:
 
-## 📦 Key Dependencies
+- **CI Pipeline** (`.github/workflows/ci.yml`)
+  - Runs on push/PR to main/develop branches
+  - Linting, tests, production build
+  - npm security audit
 
-- `@angular/core` - Angular framework
-- `@angular/common` - HTTP client and common utilities
-- `@angular/router` - Routing and navigation
-- `@angular/forms` - Reactive forms
-- `tailwindcss` - Utility-first CSS framework
-- `date-fns` - Date utility library
+- **Security Scan** (`.github/workflows/security.yml`)
+  - CodeQL analysis for TypeScript/JavaScript
+  - Weekly automated scans (Mondays 9am UTC)
+  - Dependency review on PRs
 
-## 🔐 Authentication
+- **Dependabot** (`.github/dependabot.yml`)
+  - Weekly dependency updates
+  - Automated GitHub Actions updates
 
-This frontend is designed to work with the backend authentication system:
-
-- Session-based auth (cookies)
-- Login, register, email verification
-- Password reset flows
-- Protected routes with auth guards
-
-Backend API expected at: `http://localhost:3000/api`
-
-## 🚦 Next Steps
-
-### Phase 2: Authentication UI (Coming Soon)
-- Login component
-- Register component
-- Email verification page
-- Password reset flows
-- Auth service implementation
-- Auth guard implementation
-
-### Phase 3: Dashboard + Layout
-- Main layout with navbar
-- Dashboard home page
-- User profile page
-- Account settings
-
-### Phase 4: API Integration
-- Type-safe API service
-- HTTP interceptors
-- Error handling
-- Loading states
-
-## 📚 Documentation
-
-- [Angular Documentation](https://angular.dev)
-- [Tailwind CSS](https://tailwindcss.com)
-- [TypeScript Handbook](https://www.typescriptlang.org/docs/)
-
-## 🤝 Contributing
-
-This is a generated starter project. Customize it for your SaaS needs!
-
----
-
-Generated with ❤️ by Frontend Generator (Phase 1)
+To enable GitHub Advanced Security features (CodeQL, Dependabot alerts):
+1. Push this repo to GitHub
+2. Go to Settings → Security → Enable "Dependency graph" and "Dependabot alerts"
+3. For CodeQL: Repository must be public OR have GitHub Advanced Security enabled
+```

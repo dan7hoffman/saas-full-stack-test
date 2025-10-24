@@ -151,9 +151,8 @@ export class LoginComponent {
     try {
       await this.authService.login(this.email, this.password);
 
-      // Success! Show message (in production, would redirect to dashboard)
-      // this.router.navigate(['/dashboard']);
-      alert('Login successful! ✓');
+      // Success! Redirect to dashboard
+      this.router.navigate(['/dashboard']);
     } catch (error: any) {
       this.handleError(error);
     } finally {

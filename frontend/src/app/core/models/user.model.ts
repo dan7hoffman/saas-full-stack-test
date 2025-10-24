@@ -3,6 +3,7 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
+  role: string; // USER, ADMIN, SUPER_ADMIN
   emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;

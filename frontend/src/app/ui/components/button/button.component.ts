@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ButtonPrimitive } from '../primitives/button/button.primitive';
+import { ButtonPrimitive } from '@ui/primitives/button/button.primitive';
 
 /**
  * Button - Layer 2 (Styled Component)

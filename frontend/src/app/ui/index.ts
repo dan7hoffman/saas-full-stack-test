@@ -1,13 +1,10 @@
-// Layer 1: Primitives
-export * from './primitives';
+// Primitives (Layer 1 - Headless components)
+export * from './primitives/button/button.primitive';
+export * from './primitives/input/input.primitive';
+export * from './primitives/dialog/dialog.primitive';
 
-// Layer 2: Styled Components
-export * from './button/button.component';
-export * from './input/input.component';
-export * from './card/card.component';
-export * from './modal/modal.component';
-export * from './badge/badge.component';
-export * from './avatar/avatar.component';
-
-// Design Tokens
-export * from './tokens';
+// Components (Layer 2 - Styled components)
+export * from './components/button/button.component';
+export * from './components/input/input.component';
+export * from './components/card/card.component';
+export * from './components/stat-card.component';
