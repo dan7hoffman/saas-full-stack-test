@@ -1,0 +1,93 @@
+name: Backend Security Scan
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: typescript, javascript
+          queries: security-extended
+          # Scan only backend directory
+          source-root: backend
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      # Optional: Add Snyk if you have it configured
+      # - name: Run Snyk
+      #   uses: snyk/actions/node@master
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      #   with:
+      #     args: --file=backend/package.json
+
+  secrets-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # GitHub secret scanning is automatic for public repos
+      # This job documents that we're aware of it
+      - name: Verify no secrets in code
+        run: |
+          echo "Secret scanning enabled via GitHub Advanced Security"
+          echo "Checking for common secret patterns..."
+
+          # Check for common secret patterns
+          if grep -r "password.*=" backend/src/ --exclude-dir=node_modules || \
+             grep -r "secret.*=" backend/src/ --exclude-dir=node_modules || \
+             grep -r "api.*key.*=" backend/src/ --exclude-dir=node_modules; then
+            echo "⚠️  Warning: Potential hardcoded secrets found"
+            exit 1
+          fi
+
+          echo "✅ No obvious hardcoded secrets found"
