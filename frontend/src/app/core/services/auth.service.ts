@@ -113,39 +113,36 @@ export class AuthService {
     this.loadingSignal.set(true);
 
     try {
-      // TODO: Replace with real API call
-      // const response = await fetch('http://localhost:3000/api/auth/register', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   credentials: 'include',
-      //   body: JSON.stringify({ email, password, firstName, lastName }),
-      // });
+      // Ensure we have a CSRF token
+      if (!this.csrfToken) {
+        await this.fetchCsrfToken();
+      }
 
-      // if (!response.ok) {
-      //   const error = await response.json();
-      //   throw { status: response.status, error };
-      // }
+      // Real API call to backend
+      const response = await fetch('http://localhost:3000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': this.csrfToken || '',
+        },
+        credentials: 'include', // Important for session cookies
+        body: JSON.stringify({ email, password, firstName, lastName }),
+      });
 
-      // const data: AuthResponse = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw { status: response.status, error };
+      }
 
-      // MOCK: Simulate API call
-      await this.delay(1000);
+      const data: AuthResponse = await response.json();
 
-      const mockUser: User = {
-        id: '2',
-        email,
-        firstName,
-        lastName,
-        role: 'USER',
-        emailVerified: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      // Update state
+      this.userSignal.set(data.user);
 
-      this.userSignal.set(mockUser);
-      this.saveSession(mockUser);
+      // Persist session
+      this.saveSession(data.user);
 
-      return mockUser;
+      return data.user;
     } finally {
       this.loadingSignal.set(false);
     }
