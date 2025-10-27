@@ -22,4 +22,9 @@ export const routes: Routes = [
     loadChildren: () =>
       import('./features/finance/finance.routes').then((m) => m.financeRoutes),
   },
+  {
+    path: 'invite',
+    loadChildren: () =>
+      import('./features/invitations/invitations.routes').then((m) => m.invitationRoutes),
+  },
 ];

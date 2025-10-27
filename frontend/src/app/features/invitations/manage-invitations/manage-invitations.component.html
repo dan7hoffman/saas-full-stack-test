@@ -1,0 +1,199 @@
+<div class="manage-invitations-container">
+  <div class="header">
+    <h1>Manage Invitations</h1>
+    <button class="btn-primary" (click)="openInviteModal()">
+      <span class="icon">+</span>
+      Send Invitation
+    </button>
+  </div>
+
+  <!-- Error Alert -->
+  @if (error()) {
+    <div class="alert alert-error">
+      <span class="alert-icon">⚠</span>
+      <span>{{ error() }}</span>
+      <button class="alert-close" (click)="invitationService.clearError()">×</button>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading() && !invitations()) {
+    <div class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading invitations...</p>
+    </div>
+  }
+
+  <!-- Tabs -->
+  @if (invitations()) {
+    <div class="tabs">
+      <button
+        class="tab"
+        [class.active]="activeTab() === 'pending'"
+        (click)="setActiveTab('pending')">
+        Pending
+        <span class="tab-count">{{ getTabCount('pending') }}</span>
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab() === 'accepted'"
+        (click)="setActiveTab('accepted')">
+        Accepted
+        <span class="tab-count">{{ getTabCount('accepted') }}</span>
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab() === 'expired'"
+        (click)="setActiveTab('expired')">
+        Expired
+        <span class="tab-count">{{ getTabCount('expired') }}</span>
+      </button>
+      <button
+        class="tab"
+        [class.active]="activeTab() === 'revoked'"
+        (click)="setActiveTab('revoked')">
+        Revoked
+        <span class="tab-count">{{ getTabCount('revoked') }}</span>
+      </button>
+    </div>
+
+    <!-- Invitations List -->
+    <div class="invitations-list">
+      @if (getInvitationsForActiveTab().length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">📧</div>
+          <h3>No {{ activeTab() }} invitations</h3>
+          <p>
+            @if (activeTab() === 'pending') {
+              Send an invitation to add members to your organization.
+            } @else {
+              There are no {{ activeTab() }} invitations at this time.
+            }
+          </p>
+        </div>
+      } @else {
+        @for (invitation of getInvitationsForActiveTab(); track invitation.id) {
+          <div class="invitation-card">
+            <div class="invitation-info">
+              <div class="email">{{ invitation.email }}</div>
+              <div class="role-badge" [style.background-color]="getRoleColor(invitation.role)">
+                {{ invitation.role }}
+              </div>
+            </div>
+
+            <div class="invitation-meta">
+              <div class="meta-item">
+                <span class="meta-label">Sent:</span>
+                <span class="meta-value">{{ formatDate(invitation.sentAt) }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Expires:</span>
+                <span class="meta-value">{{ formatDate(invitation.expiresAt) }}</span>
+              </div>
+              @if (invitation.acceptedAt) {
+                <div class="meta-item">
+                  <span class="meta-label">Accepted:</span>
+                  <span class="meta-value">{{ formatDate(invitation.acceptedAt) }}</span>
+                </div>
+              }
+              @if (invitation.revokedAt) {
+                <div class="meta-item">
+                  <span class="meta-label">Revoked:</span>
+                  <span class="meta-value">{{ formatDate(invitation.revokedAt) }}</span>
+                </div>
+              }
+            </div>
+
+            @if (activeTab() === 'pending') {
+              <div class="invitation-actions">
+                <button class="btn-danger-small" (click)="revokeInvitation(invitation)">
+                  Revoke
+                </button>
+              </div>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+
+  <!-- Invite Modal -->
+  @if (showInviteModal()) {
+    <div class="modal-overlay" (click)="closeInviteModal()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Send Invitation</h2>
+          <button class="modal-close" (click)="closeInviteModal()">×</button>
+        </div>
+
+        <div class="modal-body">
+          @if (sendSuccess()) {
+            <div class="success-message">
+              <div class="success-icon">✓</div>
+              <p>Invitation sent successfully!</p>
+            </div>
+          } @else {
+            <form (submit)="$event.preventDefault(); sendInvitation()">
+              <div class="form-group">
+                <label for="email">Email Address</label>
+                <input
+                  type="email"
+                  id="email"
+                  class="form-control"
+                  placeholder="colleague@example.com"
+                  [(ngModel)]="inviteEmail"
+                  name="email"
+                  required
+                  [disabled]="isSending()" />
+              </div>
+
+              <div class="form-group">
+                <label for="role">Role</label>
+                <select
+                  id="role"
+                  class="form-control"
+                  [(ngModel)]="inviteRole"
+                  name="role"
+                  [disabled]="isSending()">
+                  @for (role of availableRoles; track role) {
+                    <option [value]="role">
+                      {{ role }} - {{ getRoleDescription(role) }}
+                    </option>
+                  }
+                </select>
+              </div>
+
+              @if (sendError()) {
+                <div class="alert alert-error">
+                  <span class="alert-icon">⚠</span>
+                  <span>{{ sendError() }}</span>
+                </div>
+              }
+
+              <div class="modal-actions">
+                <button
+                  type="button"
+                  class="btn-secondary"
+                  (click)="closeInviteModal()"
+                  [disabled]="isSending()">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  [disabled]="isSending()">
+                  @if (isSending()) {
+                    <span class="spinner-small"></span>
+                    Sending...
+                  } @else {
+                    Send Invitation
+                  }
+                </button>
+              </div>
+            </form>
+          }
+        </div>
+      </div>
+    </div>
+  }
+</div>

@@ -1,0 +1,42 @@
+<div class="accept-invite-container">
+  <div class="invite-card">
+    <!-- Processing State -->
+    @if (isProcessing()) {
+      <div class="processing-state">
+        <div class="spinner"></div>
+        <h2>Accepting Invitation...</h2>
+        <p>Please wait while we process your invitation.</p>
+      </div>
+    }
+
+    <!-- Success State -->
+    @if (isSuccess() && !isProcessing()) {
+      <div class="success-state">
+        <div class="success-icon">✓</div>
+        <h2>Welcome to {{ organizationName() }}!</h2>
+        <p class="role-info">You've been added as a <strong>{{ role() }}</strong>.</p>
+        <p class="redirect-info">Redirecting to dashboard in 3 seconds...</p>
+        <button class="btn-primary" (click)="goToDashboard()">
+          Go to Dashboard Now
+        </button>
+      </div>
+    }
+
+    <!-- Error State -->
+    @if (errorMessage() && !isProcessing()) {
+      <div class="error-state">
+        <div class="error-icon">✕</div>
+        <h2>Unable to Accept Invitation</h2>
+        <p class="error-message">{{ errorMessage() }}</p>
+        <div class="error-actions">
+          <button class="btn-secondary" (click)="goToLogin()">
+            Go to Login
+          </button>
+          <button class="btn-primary" (click)="goToDashboard()">
+            Go to Dashboard
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>
