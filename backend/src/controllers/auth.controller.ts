@@ -61,14 +61,37 @@ export class AuthController {
       // Hash password with Argon2id
       const passwordHash = await hash(data.password, ARGON2_OPTIONS);
 
-      // Create user
-      const user = await prisma.user.create({
-        data: {
-          email: data.email,
-          passwordHash,
-          firstName: data.firstName,
-          lastName: data.lastName,
-        },
+      // Use transaction to create user, organization, and membership atomically
+      const { user, organization } = await prisma.$transaction(async (tx) => {
+        // Create user
+        const newUser = await tx.user.create({
+          data: {
+            email: data.email,
+            passwordHash,
+            firstName: data.firstName,
+            lastName: data.lastName,
+          },
+        });
+
+        // Create organization
+        const newOrganization = await tx.organization.create({
+          data: {
+            name: `${newUser.firstName} ${newUser.lastName}'s Household`,
+            plan: 'FREE',
+          },
+        });
+
+        // Create organization membership with OWNER role
+        await tx.organizationMember.create({
+          data: {
+            userId: newUser.id,
+            organizationId: newOrganization.id,
+            role: 'OWNER',
+            acceptedAt: new Date(),
+          },
+        });
+
+        return { user: newUser, organization: newOrganization };
       });
 
       // Generate email verification token
