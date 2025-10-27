@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { User, LoginRequest, AuthResponse } from '@core/models/user.model';
+import { environment } from '../../../environments/environment';
 
 /**
  * AuthService - Core authentication service
@@ -16,6 +17,8 @@ import { User, LoginRequest, AuthResponse } from '@core/models/user.model';
   providedIn: 'root',
 })
 export class AuthService {
+  private readonly API_URL = environment.apiUrl;
+
   // Reactive state using Angular Signals
   private userSignal = signal<User | null>(null);
   private loadingSignal = signal(false);
@@ -49,7 +52,7 @@ export class AuthService {
    */
   private async fetchCsrfToken(): Promise<void> {
     try {
-      const response = await fetch('http://localhost:3000/api/auth/csrf-token', {
+      const response = await fetch(`${this.API_URL}/api/auth/csrf-token`, {
         credentials: 'include',
       });
       const data = await response.json();
@@ -72,7 +75,7 @@ export class AuthService {
       }
 
       // Real API call to backend
-      const response = await fetch('http://localhost:3000/api/auth/login', {
+      const response = await fetch(`${this.API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -119,7 +122,7 @@ export class AuthService {
       }
 
       // Real API call to backend
-      const response = await fetch('http://localhost:3000/api/auth/register', {
+      const response = await fetch(`${this.API_URL}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -156,7 +159,7 @@ export class AuthService {
 
     try {
       // Call backend logout endpoint
-      await fetch('http://localhost:3000/api/auth/logout', {
+      await fetch(`${this.API_URL}/api/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -180,7 +183,7 @@ export class AuthService {
 
       // Validate session with backend
       try {
-        const response = await fetch('http://localhost:3000/api/auth/me', {
+        const response = await fetch(`${this.API_URL}/api/auth/me`, {
           credentials: 'include',
         });
 

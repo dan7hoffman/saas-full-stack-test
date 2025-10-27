@@ -6,6 +6,7 @@ import {
   ListInvitationsResponse,
   AcceptInvitationResponse,
 } from '@core/models/invitation.model';
+import { environment } from '../../../environments/environment';
 
 /**
  * InvitationService - Manage organization invitations
@@ -22,7 +23,7 @@ import {
   providedIn: 'root',
 })
 export class InvitationService {
-  private readonly API_URL = 'http://localhost:3000/api/invitations';
+  private readonly API_URL = `${environment.apiUrl}/api/invitations`;
 
   // Reactive state using Angular Signals
   readonly invitations = signal<ListInvitationsResponse['data'] | null>(null);
