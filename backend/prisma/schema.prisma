@@ -27,6 +27,10 @@ model User {
   failedLoginAttempts   Int       @default(0)
   lastFailedLoginAt     DateTime?
 
+  // Soft delete
+  deletedAt             DateTime?
+  deletedBy             String?
+
   // 2FA
   totpSecret            String?
   totpEnabled           Boolean   @default(false)
@@ -41,8 +45,9 @@ model User {
   sessions              Session[]
   verificationTokens    VerificationToken[]
   passwordResetTokens   PasswordResetToken[]
-  accounts              Account[]
-  liabilities           Liability[]
+  organizationMemberships OrganizationMember[]
+  createdAccounts       Account[]    @relation("createdAccounts")
+  createdLiabilities    Liability[]  @relation("createdLiabilities")
 
   @@index([email])
 }
@@ -108,62 +113,131 @@ enum TokenType {
   PASSWORD_RESET
 }
 
-// Financial tracking models
-model Account {
-  id            String   @id @default(cuid())
-  userId        String
+enum OrganizationRole {
+  OWNER   // Can delete org, manage billing, invite/remove members
+  ADMIN   // Can invite members, manage all financial data
+  MEMBER  // Can create/edit accounts and balances
+  VIEWER  // Read-only access
+}
 
-  // Core fields
-  name          String   // "Chase Checking", "Vanguard 401k"
-  type          AccountType
-  currency      String   @default("USD")
+// Multi-tenancy models for household/family sharing
+model Organization {
+  id            String   @id @default(cuid())
+  name          String   // "Hoffman Family", "Smith Household"
+
+  // Plan (for future subscription tiers)
+  plan          String   @default("FREE") // FREE, PRO, ENTERPRISE
+
+  // Soft delete
+  deletedAt     DateTime?
+  deletedBy     String?
 
   // Metadata
-  institution   String?  // "Chase", "Vanguard", etc.
-  accountNumber String?  // Last 4 digits (for reference)
-  isActive      Boolean  @default(true)
-
-  // Tracking
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balances      Balance[]
+  members       OrganizationMember[]
+  accounts      Account[]
+  liabilities   Liability[]
 
+  @@index([deletedAt])
+}
+
+model OrganizationMember {
+  id              String            @id @default(cuid())
+  organizationId  String
+  userId          String
+  role            OrganizationRole  @default(MEMBER)
+
+  // Invitation tracking
+  invitedBy       String?           // User ID who invited
+  invitedAt       DateTime          @default(now())
+  acceptedAt      DateTime?
+
+  // Metadata
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
   @@index([userId])
-  @@index([userId, isActive])
+  @@index([organizationId])
+}
+
+// Financial tracking models
+model Account {
+  id             String   @id @default(cuid())
+  organizationId String
+  createdBy      String   // Track who created this account
+
+  // Core fields
+  name           String   // "Chase Checking", "Vanguard 401k"
+  type           AccountType
+  currency       String   @default("USD")
+
+  // Metadata
+  institution    String?  // "Chase", "Vanguard", etc.
+  accountNumber  String?  // Last 4 digits (for reference)
+  isActive       Boolean  @default(true)
+
+  // Soft delete
+  deletedAt      DateTime?
+  deletedBy      String?
+
+  // Tracking
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        User         @relation("createdAccounts", fields: [createdBy], references: [id], onDelete: Restrict)
+  balances       Balance[]
+
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
 }
 
 model Liability {
-  id            String   @id @default(cuid())
-  userId        String
+  id             String   @id @default(cuid())
+  organizationId String
+  createdBy      String   // Track who created this liability
 
   // Core fields
-  name          String   // "Chase Credit Card", "Student Loan"
-  type          LiabilityType
-  currency      String   @default("USD")
+  name           String   // "Chase Credit Card", "Student Loan"
+  type           LiabilityType
+  currency       String   @default("USD")
 
   // Loan details (optional)
-  interestRate  Decimal? @db.Decimal(5, 2)   // APR (e.g., 4.50 for 4.5%)
+  interestRate   Decimal? @db.Decimal(5, 2)   // APR (e.g., 4.50 for 4.5%)
   minimumPayment Decimal? @db.Decimal(10, 2) // Monthly minimum
-  dueDate       Int?     // Day of month (1-31)
+  dueDate        Int?     // Day of month (1-31)
 
   // Metadata
-  institution   String?  // "Chase", "Nelnet", etc.
-  accountNumber String?  // Last 4 digits
-  isActive      Boolean  @default(true)
+  institution    String?  // "Chase", "Nelnet", etc.
+  accountNumber  String?  // Last 4 digits
+  isActive       Boolean  @default(true)
+
+  // Soft delete
+  deletedAt      DateTime?
+  deletedBy      String?
 
   // Tracking
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  balances      Balance[]
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  creator        User         @relation("createdLiabilities", fields: [createdBy], references: [id], onDelete: Restrict)
+  balances       Balance[]
 
-  @@index([userId])
-  @@index([userId, isActive])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@index([deletedAt])
 }
 
 model Balance {

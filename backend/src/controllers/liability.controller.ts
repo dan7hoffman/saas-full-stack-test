@@ -25,8 +25,30 @@ const updateLiabilitySchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+/**
+ * Helper: Get user's organization membership
+ * Throws 403 if user doesn't belong to any organization
+ */
+async function getOrganizationMembership(userId: string) {
+  const membership = await prisma.organizationMember.findFirst({
+    where: {
+      userId,
+      organization: { deletedAt: null }, // Org must be active
+    },
+    include: {
+      organization: true,
+    },
+  });
+
+  if (!membership) {
+    throw new Error('NO_ORGANIZATION');
+  }
+
+  return membership;
+}
+
 export class LiabilityController {
-  // GET /api/liabilities - List all liabilities for current user
+  // GET /api/liabilities - List all liabilities for current user's organization
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.session?.userId;
@@ -35,17 +57,38 @@ export class LiabilityController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
       const includeInactive = req.query.includeInactive === 'true';
 
+      // Query by organizationId instead of userId
       const liabilities = await prisma.liability.findMany({
         where: {
-          userId,
+          organizationId: membership.organizationId,
+          deletedAt: null, // Exclude soft-deleted
           ...(includeInactive ? {} : { isActive: true }),
         },
         include: {
           balances: {
             orderBy: { date: 'desc' },
             take: 1, // Get latest balance
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
         orderBy: { createdAt: 'asc' },
@@ -72,13 +115,37 @@ export class LiabilityController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
       const { id } = req.params;
 
+      // Query by organizationId AND liability ID
       const liability = await prisma.liability.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
         include: {
           balances: {
             orderBy: { date: 'desc' },
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
       });
@@ -103,12 +170,41 @@ export class LiabilityController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can create
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot create liabilities' });
+        return;
+      }
+
       const validated = createLiabilitySchema.parse(req.body);
 
+      // Create with organizationId and createdBy (from auth, not body!)
       const liability = await prisma.liability.create({
         data: {
           ...validated,
-          userId,
+          organizationId: membership.organizationId,
+          createdBy: userId,
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
       });
 
@@ -131,12 +227,34 @@ export class LiabilityController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can edit
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot edit liabilities' });
+        return;
+      }
+
       const { id } = req.params;
       const validated = updateLiabilitySchema.parse(req.body);
 
-      // Verify ownership
+      // Verify liability belongs to user's organization
       const existing = await prisma.liability.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
@@ -147,6 +265,15 @@ export class LiabilityController {
       const liability = await prisma.liability.update({
         where: { id },
         data: validated,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       });
 
       res.status(200).json({ data: liability });
@@ -168,12 +295,34 @@ export class LiabilityController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: ADMIN or higher can delete
+      if (membership.role === 'VIEWER' || membership.role === 'MEMBER') {
+        res.status(403).json({ error: 'Only admins can delete liabilities' });
+        return;
+      }
+
       const { id } = req.params;
       const hardDelete = req.query.hard === 'true';
 
-      // Verify ownership
+      // Verify liability belongs to user's organization
       const existing = await prisma.liability.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
@@ -182,11 +331,17 @@ export class LiabilityController {
       }
 
       if (hardDelete) {
+        // Hard delete (only if explicitly requested)
         await prisma.liability.delete({ where: { id } });
       } else {
+        // Soft delete with audit trail
         await prisma.liability.update({
           where: { id },
-          data: { isActive: false },
+          data: {
+            isActive: false,
+            deletedAt: new Date(),
+            deletedBy: userId,
+          },
         });
       }
 

@@ -26,6 +26,27 @@ const bulkUpdateBalancesSchema = z.object({
   note: z.string().optional(),
 });
 
+/**
+ * Helper: Get user's organization membership
+ */
+async function getOrganizationMembership(userId: string) {
+  const membership = await prisma.organizationMember.findFirst({
+    where: {
+      userId,
+      organization: { deletedAt: null },
+    },
+    include: {
+      organization: true,
+    },
+  });
+
+  if (!membership) {
+    throw new Error('NO_ORGANIZATION');
+  }
+
+  return membership;
+}
+
 export class BalanceController {
   // GET /api/balances - Get balances for a specific date (or latest if no date)
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -34,6 +55,18 @@ export class BalanceController {
       if (!userId) {
         res.status(401).json({ error: 'Unauthorized' });
         return;
+      }
+
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
       }
 
       const dateParam = req.query.date as string | undefined;
@@ -45,7 +78,10 @@ export class BalanceController {
         const [accountBalances, liabilityBalances] = await Promise.all([
           prisma.balance.findMany({
             where: {
-              account: { userId },
+              account: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
               date,
             },
             include: {
@@ -54,7 +90,10 @@ export class BalanceController {
           }),
           prisma.balance.findMany({
             where: {
-              liability: { userId },
+              liability: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
               date,
             },
             include: {
@@ -71,12 +110,22 @@ export class BalanceController {
           },
         });
       } else {
-        // Get all unique dates with balances
+        // Get all unique dates with balances for this organization
         const dates = await prisma.balance.findMany({
           where: {
             OR: [
-              { account: { userId } },
-              { liability: { userId } },
+              {
+                account: {
+                  organizationId: membership.organizationId,
+                  deletedAt: null,
+                },
+              },
+              {
+                liability: {
+                  organizationId: membership.organizationId,
+                  deletedAt: null,
+                },
+              },
             ],
           },
           select: {
@@ -109,12 +158,34 @@ export class BalanceController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can create balances
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot create balances' });
+        return;
+      }
+
       const validated = createBalanceSchema.parse(req.body);
 
-      // Verify ownership of account/liability
+      // Verify ownership of account/liability belongs to user's organization
       if (validated.accountId) {
         const account = await prisma.account.findFirst({
-          where: { id: validated.accountId, userId },
+          where: {
+            id: validated.accountId,
+            organizationId: membership.organizationId,
+            deletedAt: null,
+          },
         });
         if (!account) {
           res.status(404).json({ error: 'Account not found' });
@@ -124,7 +195,11 @@ export class BalanceController {
 
       if (validated.liabilityId) {
         const liability = await prisma.liability.findFirst({
-          where: { id: validated.liabilityId, userId },
+          where: {
+            id: validated.liabilityId,
+            organizationId: membership.organizationId,
+            deletedAt: null,
+          },
         });
         if (!liability) {
           res.status(404).json({ error: 'Liability not found' });
@@ -165,20 +240,46 @@ export class BalanceController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can update balances
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot update balances' });
+        return;
+      }
+
       const validated = bulkUpdateBalancesSchema.parse(req.body);
       const date = new Date(validated.date);
 
-      // Verify ownership of all accounts/liabilities
+      // Verify ownership of all accounts/liabilities belong to user's organization
       const accountIds = validated.balances.filter(b => b.accountId).map(b => b.accountId!);
       const liabilityIds = validated.balances.filter(b => b.liabilityId).map(b => b.liabilityId!);
 
       const [accounts, liabilities] = await Promise.all([
         prisma.account.findMany({
-          where: { id: { in: accountIds }, userId },
+          where: {
+            id: { in: accountIds },
+            organizationId: membership.organizationId,
+            deletedAt: null,
+          },
           select: { id: true },
         }),
         prisma.liability.findMany({
-          where: { id: { in: liabilityIds }, userId },
+          where: {
+            id: { in: liabilityIds },
+            organizationId: membership.organizationId,
+            deletedAt: null,
+          },
           select: { id: true },
         }),
       ]);
@@ -235,22 +336,40 @@ export class BalanceController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
       const dateParam = req.query.date as string | undefined;
 
       if (dateParam) {
-        // Calculate net worth for specific date
+        // Calculate net worth for specific date (organization-scoped)
         const date = new Date(dateParam);
 
         const [accountBalances, liabilityBalances] = await Promise.all([
           prisma.balance.findMany({
             where: {
-              account: { userId },
+              account: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
               date,
             },
           }),
           prisma.balance.findMany({
             where: {
-              liability: { userId },
+              liability: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
               date,
             },
           }),
@@ -271,12 +390,22 @@ export class BalanceController {
           },
         });
       } else {
-        // Calculate net worth for all dates
+        // Calculate net worth for all dates (organization-scoped)
         const dates = await prisma.balance.findMany({
           where: {
             OR: [
-              { account: { userId } },
-              { liability: { userId } },
+              {
+                account: {
+                  organizationId: membership.organizationId,
+                  deletedAt: null,
+                },
+              },
+              {
+                liability: {
+                  organizationId: membership.organizationId,
+                  deletedAt: null,
+                },
+              },
             ],
           },
           select: { date: true },
@@ -288,10 +417,22 @@ export class BalanceController {
           dates.map(async ({ date }) => {
             const [accountBalances, liabilityBalances] = await Promise.all([
               prisma.balance.findMany({
-                where: { account: { userId }, date },
+                where: {
+                  account: {
+                    organizationId: membership.organizationId,
+                    deletedAt: null,
+                  },
+                  date,
+                },
               }),
               prisma.balance.findMany({
-                where: { liability: { userId }, date },
+                where: {
+                  liability: {
+                    organizationId: membership.organizationId,
+                    deletedAt: null,
+                  },
+                  date,
+                },
               }),
             ]);
 
@@ -328,15 +469,43 @@ export class BalanceController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can delete balances
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot delete balances' });
+        return;
+      }
+
       const { id } = req.params;
 
-      // Verify ownership through account or liability
+      // Verify ownership through account or liability (organization-scoped)
       const balance = await prisma.balance.findFirst({
         where: {
           id,
           OR: [
-            { account: { userId } },
-            { liability: { userId } },
+            {
+              account: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
+            },
+            {
+              liability: {
+                organizationId: membership.organizationId,
+                deletedAt: null,
+              },
+            },
           ],
         },
       });

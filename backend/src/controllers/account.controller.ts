@@ -19,8 +19,30 @@ const updateAccountSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+/**
+ * Helper: Get user's organization membership
+ * Throws 403 if user doesn't belong to any organization
+ */
+async function getOrganizationMembership(userId: string) {
+  const membership = await prisma.organizationMember.findFirst({
+    where: {
+      userId,
+      organization: { deletedAt: null }, // Org must be active
+    },
+    include: {
+      organization: true,
+    },
+  });
+
+  if (!membership) {
+    throw new Error('NO_ORGANIZATION');
+  }
+
+  return membership;
+}
+
 export class AccountController {
-  // GET /api/accounts - List all accounts for current user
+  // GET /api/accounts - List all accounts for current user's organization
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = req.session?.userId;
@@ -29,17 +51,38 @@ export class AccountController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
       const includeInactive = req.query.includeInactive === 'true';
 
+      // Query by organizationId instead of userId
       const accounts = await prisma.account.findMany({
         where: {
-          userId,
+          organizationId: membership.organizationId,
+          deletedAt: null, // Exclude soft-deleted accounts
           ...(includeInactive ? {} : { isActive: true }),
         },
         include: {
           balances: {
             orderBy: { date: 'desc' },
             take: 1, // Get latest balance
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
         orderBy: { createdAt: 'asc' },
@@ -66,13 +109,37 @@ export class AccountController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
       const { id } = req.params;
 
+      // Query by organizationId AND account ID
       const account = await prisma.account.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
         include: {
           balances: {
             orderBy: { date: 'desc' },
+          },
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
       });
@@ -97,12 +164,41 @@ export class AccountController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can create
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot create accounts' });
+        return;
+      }
+
       const validated = createAccountSchema.parse(req.body);
 
+      // Create with organizationId and createdBy (from auth, not body!)
       const account = await prisma.account.create({
         data: {
           ...validated,
-          userId,
+          organizationId: membership.organizationId,
+          createdBy: userId,
+        },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
       });
 
@@ -125,12 +221,34 @@ export class AccountController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: MEMBER or higher can edit
+      if (membership.role === 'VIEWER') {
+        res.status(403).json({ error: 'Viewers cannot edit accounts' });
+        return;
+      }
+
       const { id } = req.params;
       const validated = updateAccountSchema.parse(req.body);
 
-      // Verify ownership
+      // Verify account belongs to user's organization
       const existing = await prisma.account.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
@@ -141,6 +259,15 @@ export class AccountController {
       const account = await prisma.account.update({
         where: { id },
         data: validated,
+        include: {
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
       });
 
       res.status(200).json({ data: account });
@@ -162,12 +289,34 @@ export class AccountController {
         return;
       }
 
+      // Get user's organization
+      let membership;
+      try {
+        membership = await getOrganizationMembership(userId);
+      } catch (error) {
+        if (error instanceof Error && error.message === 'NO_ORGANIZATION') {
+          res.status(403).json({ error: 'No organization membership' });
+          return;
+        }
+        throw error;
+      }
+
+      // Check permission: ADMIN or higher can delete
+      if (membership.role === 'VIEWER' || membership.role === 'MEMBER') {
+        res.status(403).json({ error: 'Only admins can delete accounts' });
+        return;
+      }
+
       const { id } = req.params;
       const hardDelete = req.query.hard === 'true';
 
-      // Verify ownership
+      // Verify account belongs to user's organization
       const existing = await prisma.account.findFirst({
-        where: { id, userId },
+        where: {
+          id,
+          organizationId: membership.organizationId,
+          deletedAt: null,
+        },
       });
 
       if (!existing) {
@@ -176,11 +325,17 @@ export class AccountController {
       }
 
       if (hardDelete) {
+        // Hard delete (only if explicitly requested)
         await prisma.account.delete({ where: { id } });
       } else {
+        // Soft delete with audit trail
         await prisma.account.update({
           where: { id },
-          data: { isActive: false },
+          data: {
+            isActive: false,
+            deletedAt: new Date(),
+            deletedBy: userId,
+          },
         });
       }
 
