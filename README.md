@@ -53,15 +53,23 @@ npm run dev
 
 **MailHog UI**: http://localhost:8025
 
-### Frontend (Coming Soon)
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 
-# Frontend will run at: http://localhost:4200
+# Frontend runs at: http://localhost:4200
 ```
+
+**Features**:
+- ✅ Authentication (Login/Register/Logout)
+- ✅ Dashboard with stats
+- ✅ Financial tracking (Accounts & Balance Entry)
+- ✅ Organization invitations with auto-registration
+- ✅ CSRF token integration
+- ✅ Signal-based reactivity
 
 ## Testing Strategy
 
@@ -103,7 +111,38 @@ Will include separate workflows for:
 - **01-Scripts**: Generator tooling (https://github.com/.../01-Scripts)
 - **Context**: `.claude/` in 01-Scripts repo
 
+## Invitation System
+
+The application includes a complete organization invitation system:
+
+### Features
+- ✅ **Send invitations** by email with role assignment (OWNER/ADMIN/MEMBER/VIEWER)
+- ✅ **Email delivery** via MailHog (local) with invitation links
+- ✅ **Auto-redirect**: Unauthenticated users go to register page
+- ✅ **Email pre-fill**: Registration form pre-filled with invited email (readonly)
+- ✅ **Auto-accept**: Invitation automatically accepted after registration
+- ✅ **Status tracking**: PENDING, ACCEPTED, EXPIRED, REVOKED states
+- ✅ **Token-based security**: SHA-256 hashed tokens with expiration
+- ✅ **Revocation support**: Admins can revoke pending invitations
+
+### User Flow
+1. Admin sends invitation from `/invite/manage`
+2. Invitee receives email with invitation link
+3. Clicking link redirects to `/auth/register?inviteToken=xxx`
+4. Email is pre-filled on registration form
+5. After successful registration, invitation is auto-accepted
+6. New user has immediate access to the organization
+
+### Testing Invitations
+1. Login as `admin@example.com`
+2. Navigate to "Invite Members" on dashboard
+3. Send invitation to any email
+4. Check MailHog at http://localhost:8025 for email
+5. Open invitation link in incognito window
+6. Register with the pre-filled email
+7. Verify user is added to "Admin Family" organization
+
 ---
 
-**Status**: Backend complete ✅ | Frontend in progress 🚧
-**Next**: Build frontend iteratively with 3-layer UI composition
+**Status**: Backend complete ✅ | Frontend complete ✅
+**Next**: Extract frontend patterns to 4-FrontendGenerator

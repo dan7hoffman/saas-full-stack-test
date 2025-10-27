@@ -6,6 +6,7 @@ import {
   Invitation,
   OrganizationRole,
   SendInvitationRequest,
+  InvitationStatus,
 } from '@core/models/invitation.model';
 
 /**
@@ -185,5 +186,28 @@ export class ManageInvitationsComponent implements OnInit {
     const data = this.invitations();
     if (!data) return 0;
     return data[tab].length;
+  }
+
+  /**
+   * Get invitation status for display
+   */
+  getInvitationStatus(invitation: Invitation): InvitationStatus {
+    if (invitation.revokedAt) return 'REVOKED';
+    if (invitation.acceptedAt) return 'ACCEPTED';
+    if (new Date(invitation.expiresAt) < new Date()) return 'EXPIRED';
+    return 'PENDING';
+  }
+
+  /**
+   * Get status badge color
+   */
+  getStatusColor(status: InvitationStatus): string {
+    const colors: Record<InvitationStatus, string> = {
+      PENDING: '#ff9800',
+      ACCEPTED: '#4caf50',
+      EXPIRED: '#9e9e9e',
+      REVOKED: '#f44336',
+    };
+    return colors[status];
   }
 }

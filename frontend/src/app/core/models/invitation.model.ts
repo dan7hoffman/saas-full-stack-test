@@ -4,6 +4,11 @@
 export type OrganizationRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 /**
+ * Invitation status enum
+ */
+export type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
+
+/**
  * Invitation interface
  */
 export interface Invitation {
@@ -14,6 +19,8 @@ export interface Invitation {
   expiresAt: string;
   acceptedAt?: string;
   revokedAt?: string;
+  status?: InvitationStatus; // Computed on frontend based on dates
+  organizationName?: string; // For display purposes
 }
 
 /**

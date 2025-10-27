@@ -76,8 +76,13 @@
           <div class="invitation-card">
             <div class="invitation-info">
               <div class="email">{{ invitation.email }}</div>
-              <div class="role-badge" [style.background-color]="getRoleColor(invitation.role)">
-                {{ invitation.role }}
+              <div class="badges">
+                <div class="role-badge" [style.background-color]="getRoleColor(invitation.role)">
+                  {{ invitation.role }}
+                </div>
+                <div class="status-badge" [style.background-color]="getStatusColor(getInvitationStatus(invitation))">
+                  {{ getInvitationStatus(invitation) }}
+                </div>
               </div>
             </div>
 
@@ -133,6 +138,11 @@
               <p>Invitation sent successfully!</p>
             </div>
           } @else {
+            <div class="modal-info">
+              <p class="text-muted">
+                <strong>Note:</strong> The invitee will receive an email with a registration link. Once they register, they'll automatically be added to your organization.
+              </p>
+            </div>
             <form (submit)="$event.preventDefault(); sendInvitation()">
               <div class="form-group">
                 <label for="email">Email Address</label>

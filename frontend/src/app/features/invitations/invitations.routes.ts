@@ -7,7 +7,7 @@ export const invitationRoutes: Routes = [
   {
     path: 'accept',
     component: AcceptInviteComponent,
-    canActivate: [authGuard],
+    // No auth guard - component handles redirect for unauthenticated users
   },
   {
     path: 'manage',

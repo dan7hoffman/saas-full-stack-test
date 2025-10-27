@@ -1,9 +1,10 @@
-import { Component, signal, inject } from '@angular/core';
+import { Component, signal, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { Button, Input, Card } from '@ui';
 import { AuthService } from '@core/services/auth.service';
+import { InvitationService } from '@core/services/invitation.service';
 
 /**
  * RegisterComponent - User registration page
@@ -27,7 +28,13 @@ import { AuthService } from '@core/services/auth.service';
         <!-- Logo/Brand -->
         <div class="text-center mb-8">
           <h1 class="text-3xl font-bold text-gray-900">{{ appName }}</h1>
-          <p class="text-gray-600 mt-2">Create your account</p>
+          <p class="text-gray-600 mt-2">
+            @if (invitationOrganizationName()) {
+              Join {{ invitationOrganizationName() }}
+            } @else {
+              Create your account
+            }
+          </p>
         </div>
 
         <!-- Registration Card -->
@@ -65,7 +72,7 @@ import { AuthService } from '@core/services/auth.service';
                 [(ngModel)]="email"
                 name="email"
                 [error]="emailError()"
-                [disabled]="isLoading()"
+                [disabled]="isLoading() || invitationOrganizationName() !== null"
                 [required]="true" />
 
               <!-- Password Input -->
@@ -147,10 +154,12 @@ import { AuthService } from '@core/services/auth.service';
     </div>
   `,
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   // Injected services
   private authService = inject(AuthService);
+  private invitationService = inject(InvitationService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   // Form data
   firstName = '';
@@ -158,6 +167,10 @@ export class RegisterComponent {
   email = '';
   password = '';
   confirmPassword = '';
+
+  // Invitation token from query params
+  private inviteToken: string | null = null;
+  invitationOrganizationName = signal<string | null>(null);
 
   // UI state (using Angular signals for reactivity)
   isLoading = signal(false);
@@ -176,6 +189,25 @@ export class RegisterComponent {
    * Calculate password strength (0-4)
    */
   passwordStrength = signal(0);
+
+  /**
+   * Initialize component - check for invitation token
+   */
+  async ngOnInit(): Promise<void> {
+    // Check for invitation token in query params
+    this.inviteToken = this.route.snapshot.queryParamMap.get('inviteToken');
+
+    if (this.inviteToken) {
+      try {
+        // Validate invitation and pre-fill email
+        const invitationDetails = await this.invitationService.validateInvitation(this.inviteToken);
+        this.email = invitationDetails.email;
+        this.invitationOrganizationName.set(invitationDetails.organizationName);
+      } catch (error: any) {
+        this.generalError.set(error.message || 'Invalid invitation link');
+      }
+    }
+  }
 
   /**
    * Password strength label
@@ -260,10 +292,25 @@ export class RegisterComponent {
         this.lastName
       );
 
-      // Success! Show message and redirect
-      this.successMessage.set(
-        'Account created! Please check your email to verify your account.'
-      );
+      // If invitation token exists, accept it automatically
+      if (this.inviteToken) {
+        try {
+          await this.invitationService.acceptInvitation(this.inviteToken);
+          this.successMessage.set(
+            `Account created! You've been added to ${this.invitationOrganizationName() || 'the organization'}.`
+          );
+        } catch (inviteError: any) {
+          // Log error but don't block user - they're already registered
+          console.error('Failed to auto-accept invitation:', inviteError);
+          this.successMessage.set(
+            'Account created! Please check your email to verify your account.'
+          );
+        }
+      } else {
+        this.successMessage.set(
+          'Account created! Please check your email to verify your account.'
+        );
+      }
 
       // Redirect to dashboard after 2 seconds
       setTimeout(() => {

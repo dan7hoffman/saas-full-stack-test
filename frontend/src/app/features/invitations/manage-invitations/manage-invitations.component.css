@@ -168,7 +168,14 @@
   color: #333;
 }
 
-.role-badge {
+.badges {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.role-badge,
+.status-badge {
   padding: 0.35rem 0.75rem;
   border-radius: 16px;
   color: white;
@@ -303,6 +310,21 @@
   justify-content: center;
   z-index: 1000;
   padding: 2rem;
+}
+
+.modal-info {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 4px;
+}
+
+.modal-info .text-muted {
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
 }
 
 .modal-content {
