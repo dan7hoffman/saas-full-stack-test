@@ -71,6 +71,13 @@ export function extractSessionToken(cookie: string): string {
  * Clean up all test data
  */
 export async function cleanupTestData() {
+  // Delete in correct order due to foreign key constraints
+  await prisma.balance.deleteMany({});
+  await prisma.account.deleteMany({});
+  await prisma.liability.deleteMany({});
+  await prisma.invitation.deleteMany({});
+  await prisma.organizationMember.deleteMany({});
+  await prisma.organization.deleteMany({});
   await prisma.passwordResetToken.deleteMany({});
   await prisma.verificationToken.deleteMany({});
   await prisma.session.deleteMany({});
