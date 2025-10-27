@@ -12,8 +12,18 @@ export const financeRoutes: Routes = [
           import('./accounts/accounts.component').then((m) => m.AccountsComponent),
       },
       {
+        path: 'balance-entry',
+        loadComponent: () =>
+          import('./balance-entry/balance-entry.component').then((m) => m.BalanceEntryComponent),
+      },
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./dashboard/dashboard.component').then((m) => m.FinanceDashboardComponent),
+      },
+      {
         path: '',
-        redirectTo: 'accounts',
+        redirectTo: 'dashboard',
         pathMatch: 'full',
       },
     ],

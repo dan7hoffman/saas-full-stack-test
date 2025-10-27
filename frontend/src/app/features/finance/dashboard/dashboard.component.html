@@ -1,0 +1,127 @@
+<div class="max-w-7xl mx-auto p-6">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Net Worth Dashboard</h1>
+    <p class="text-gray-600">Track your financial progress over time</p>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <p class="ml-4 text-gray-600">Loading dashboard...</p>
+    </div>
+  }
+
+  <!-- Error Banner -->
+  @if (error()) {
+    <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start justify-between">
+      <div class="flex items-start">
+        <span class="text-red-600 text-xl mr-3">⚠️</span>
+        <div>
+          <h3 class="font-semibold text-red-800 mb-1">Error</h3>
+          <p class="text-red-700 text-sm">{{ error() }}</p>
+        </div>
+      </div>
+      <button
+        (click)="dismissError()"
+        class="text-red-400 hover:text-red-600 transition-colors"
+      >
+        ✕
+      </button>
+    </div>
+  }
+
+  @if (!loading() && netWorthHistory().length === 0) {
+    <!-- Empty State -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-8 text-center">
+      <div class="text-yellow-800 mb-4">
+        <svg class="mx-auto h-16 w-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <h3 class="text-xl font-semibold mb-2">No Data Yet</h3>
+        <p class="mb-6">Start tracking your net worth by adding accounts and entering balance data.</p>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center">
+        <button
+          (click)="manageAccounts()"
+          class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        >
+          Add Accounts
+        </button>
+        <button
+          (click)="enterBalances()"
+          class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+        >
+          Enter Balances
+        </button>
+      </div>
+    </div>
+  }
+
+  @if (!loading() && netWorthHistory().length > 0) {
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <!-- Current Net Worth -->
+      <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
+        <p class="text-purple-100 text-sm mb-2">Current Net Worth</p>
+        <p class="text-3xl font-bold mb-1">{{ formatCurrency(currentNetWorth()?.netWorth) }}</p>
+        @if (netWorthHistory().length >= 2) {
+          <p class="text-sm" [ngClass]="getQoQGrowthClass()">
+            {{ getQoQGrowth() }} from last quarter
+          </p>
+        }
+      </div>
+
+      <!-- Total Assets -->
+      <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <p class="text-gray-600 text-sm mb-2">Total Assets</p>
+        <p class="text-3xl font-bold text-blue-600 mb-1">
+          {{ formatCurrency(currentNetWorth()?.totalAssets) }}
+        </p>
+        <p class="text-xs text-gray-500">As of {{ currentNetWorth()?.date | date: 'mediumDate' }}</p>
+      </div>
+
+      <!-- Total Liabilities -->
+      <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+        <p class="text-gray-600 text-sm mb-2">Total Liabilities</p>
+        <p class="text-3xl font-bold text-red-600 mb-1">
+          {{ formatCurrency(currentNetWorth()?.totalLiabilities) }}
+        </p>
+        <p class="text-xs text-gray-500">As of {{ currentNetWorth()?.date | date: 'mediumDate' }}</p>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-900 mb-4">Net Worth Over Time</h2>
+      <div id="networth-chart"></div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <button
+        (click)="manageAccounts()"
+        class="flex items-center justify-center px-6 py-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2" stroke-width="2"/>
+          <line x1="1" y1="10" x2="23" y2="10" stroke-width="2"/>
+        </svg>
+        Manage Accounts
+      </button>
+      <button
+        (click)="enterBalances()"
+        class="flex items-center justify-center px-6 py-4 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+      >
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-width="2"/>
+          <polyline points="14 2 14 8 20 8" stroke-width="2"/>
+          <line x1="12" y1="18" x2="12" y2="12" stroke-width="2"/>
+          <line x1="9" y1="15" x2="15" y2="15" stroke-width="2"/>
+        </svg>
+        Enter Balances
+      </button>
+    </div>
+  }
+</div>
