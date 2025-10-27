@@ -486,4 +486,75 @@ export class InvitationController {
       next(error);
     }
   }
+
+  /**
+   * Validate invitation token (NO AUTH REQUIRED)
+   * GET /api/invitations/validate/:token
+   * Returns invitation details without requiring authentication
+   */
+  async validate(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token } = req.params;
+      if (!token) {
+        res.status(400).json({ error: 'Invitation token is required' });
+        return;
+      }
+
+      // Hash the provided token
+      const hashedToken = createHash('sha256').update(token).digest('hex');
+
+      // Find invitation
+      const invitation = await prisma.invitation.findUnique({
+        where: { token: hashedToken },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              deletedAt: true,
+            },
+          },
+        },
+      });
+
+      if (!invitation) {
+        res.status(404).json({ error: 'Invalid invitation token' });
+        return;
+      }
+
+      // Check if invitation is still valid
+      if (invitation.acceptedAt) {
+        res.status(400).json({ error: 'Invitation has already been accepted' });
+        return;
+      }
+
+      if (invitation.revokedAt) {
+        res.status(400).json({ error: 'Invitation has been revoked' });
+        return;
+      }
+
+      if (invitation.expiresAt < new Date()) {
+        res.status(400).json({ error: 'Invitation has expired' });
+        return;
+      }
+
+      if (invitation.organization.deletedAt) {
+        res.status(400).json({ error: 'Organization no longer exists' });
+        return;
+      }
+
+      // Return invitation details (without sensitive info)
+      res.status(200).json({
+        data: {
+          email: invitation.email,
+          role: invitation.role,
+          organizationName: invitation.organization.name,
+          expiresAt: invitation.expiresAt,
+        },
+        message: 'Invitation is valid',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

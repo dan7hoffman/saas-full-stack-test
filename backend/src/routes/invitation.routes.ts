@@ -6,7 +6,14 @@ const router = Router();
 const invitationController = new InvitationController();
 
 /**
- * All invitation routes require authentication
+ * @route   GET /api/invitations/validate/:token
+ * @desc    Validate invitation token (NO AUTH REQUIRED)
+ * @access  Public
+ */
+router.get('/validate/:token', invitationController.validate.bind(invitationController));
+
+/**
+ * All other invitation routes require authentication
  */
 router.use(authenticateRequest);
 

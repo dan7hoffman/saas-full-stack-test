@@ -150,6 +150,33 @@ export class InvitationService {
   }
 
   /**
+   * Validate invitation token (NO AUTH REQUIRED)
+   * Used to get invitation details before registration
+   */
+  async validateInvitation(token: string): Promise<{
+    email: string;
+    role: string;
+    organizationName: string;
+    expiresAt: string;
+  }> {
+    try {
+      const response = await fetch(`${this.API_URL}/validate/${token}`, {
+        method: 'GET',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Invalid invitation token');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (error: any) {
+      throw new Error(error.message || 'Failed to validate invitation');
+    }
+  }
+
+  /**
    * Clear error state
    */
   clearError(): void {

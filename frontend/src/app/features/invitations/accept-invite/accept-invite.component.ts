@@ -2,15 +2,18 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { InvitationService } from '@core/services/invitation.service';
+import { AuthService } from '@core/services/auth.service';
 
 /**
  * AcceptInviteComponent - Accept organization invitation
  *
  * Flow:
  * 1. Extract token from URL query parameter
- * 2. Validate token and accept invitation
- * 3. Show success message with organization details
- * 4. Redirect to dashboard
+ * 2. Check if user is logged in
+ * 3. If NOT logged in → redirect to register with email pre-filled
+ * 4. If logged in → validate token and accept invitation
+ * 5. Show success message with organization details
+ * 6. Redirect to dashboard
  *
  * Error handling:
  * - Invalid/expired token
@@ -36,7 +39,8 @@ export class AcceptInviteComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private invitationService: InvitationService
+    private invitationService: InvitationService,
+    private authService: AuthService
   ) {}
 
   async ngOnInit(): Promise<void> {
@@ -49,7 +53,18 @@ export class AcceptInviteComponent implements OnInit {
       return;
     }
 
-    // Accept invitation
+    // Check if user is logged in
+    const isLoggedIn = this.authService.user() !== null;
+
+    if (!isLoggedIn) {
+      // Not logged in - redirect to register with token
+      this.router.navigate(['/auth/register'], {
+        queryParams: { inviteToken: this.token }
+      });
+      return;
+    }
+
+    // User is logged in - accept invitation
     await this.acceptInvitation();
   }
 
