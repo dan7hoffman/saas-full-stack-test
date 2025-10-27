@@ -118,3 +118,58 @@ export async function sendWelcomeEmail(
     `,
   });
 }
+
+/**
+ * Send organization invitation email
+ */
+export async function sendInvitationEmail(params: {
+  to: string;
+  organizationName: string;
+  inviterName: string;
+  token: string;
+  role: string;
+}): Promise<void> {
+  const { to, organizationName, inviterName, token, role } = params;
+  const acceptUrl = `${FRONTEND_URL}/invite/accept?token=${token}`;
+
+  const roleDescription = {
+    OWNER: 'full access and can manage the organization',
+    ADMIN: 'manage members and all data',
+    MEMBER: 'create and edit data',
+    VIEWER: 'view-only access',
+  }[role] || 'access';
+
+  await transporter.sendMail({
+    from: FROM_EMAIL,
+    to,
+    subject: `You've been invited to join ${organizationName}`,
+    html: `
+      <h1>You've Been Invited!</h1>
+      <p>${inviterName} has invited you to join <strong>${organizationName}</strong> as a <strong>${role}</strong>.</p>
+      <p>As a ${role}, you will have ${roleDescription}.</p>
+      <p>Click the link below to accept the invitation:</p>
+      <p><a href="${acceptUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Accept Invitation</a></p>
+      <p>Or copy and paste this link into your browser:</p>
+      <p>${acceptUrl}</p>
+      <p>This invitation will expire in 7 days.</p>
+      <p>If you don't have an account yet, you'll be able to create one after clicking the link.</p>
+      <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+    `,
+    text: `
+      You've Been Invited!
+
+      ${inviterName} has invited you to join ${organizationName} as a ${role}.
+
+      As a ${role}, you will have ${roleDescription}.
+
+      Click the link below to accept the invitation:
+      ${acceptUrl}
+
+      This invitation will expire in 7 days.
+
+      If you don't have an account yet, you'll be able to create one after clicking the link.
+
+      If you didn't expect this invitation, you can safely ignore this email.
+    `,
+  });
+}

@@ -16,6 +16,7 @@ import authRoutes from './routes/auth.routes';
 import healthRoutes from './routes/health.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import financeRoutes from './routes/finance.routes';
+import invitationRoutes from './routes/invitation.routes';
 
 // Load environment variables
 dotenv.config();
@@ -130,6 +131,7 @@ app.use('/', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/finance', financeRoutes);
+app.use('/api/invitations', invitationRoutes);
 app.use('/api', apiRateLimit); // Apply to all other API routes
 
 // 404 handler

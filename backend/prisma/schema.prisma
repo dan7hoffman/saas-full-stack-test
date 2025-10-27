@@ -138,6 +138,7 @@ model Organization {
 
   // Relations
   members       OrganizationMember[]
+  invitations   Invitation[]         @relation("organizationInvitations")
   accounts      Account[]
   liabilities   Liability[]
 
@@ -165,6 +166,35 @@ model OrganizationMember {
 
   @@unique([organizationId, userId])
   @@index([userId])
+  @@index([organizationId])
+}
+
+// Organization invitation model (for pending invitations)
+model Invitation {
+  id              String            @id @default(cuid())
+  organizationId  String
+  email           String            // Email of invited person
+  role            OrganizationRole  @default(MEMBER)
+  token           String            @unique // Invitation token (hashed)
+
+  // Invitation lifecycle
+  invitedBy       String            // User ID who sent invitation
+  sentAt          DateTime          @default(now())
+  expiresAt       DateTime          // Typically 7 days from sentAt
+  acceptedAt      DateTime?         // When invitation was accepted
+  revokedAt       DateTime?         // If invitation was cancelled
+
+  // Metadata
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relations
+  organization    Organization      @relation("organizationInvitations", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, email]) // Only one active invitation per email per org
+  @@index([token])
+  @@index([email])
+  @@index([expiresAt])
   @@index([organizationId])
 }
 
